@@ -32,7 +32,7 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
     def _fields_items(self):
         return {
             "Результат": 0,
-            "Сумма": "Укажите сумму конвертации",
+            "Сумма_запроса": "Укажите сумму",
             "Валюта": "Укажите USD или RUB",
         }
 
