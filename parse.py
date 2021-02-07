@@ -5,19 +5,32 @@ from urllib import request, parse
 
 class Parse:
 
-    _url = "https://calcus.ru/currency"
-    _currency1 = "RUB"
-    _currency2 = "USD"
-    _value = 1
+    _URL = "https://calcus.ru/currency"
+    _CURRENCY1 = "RUB"
+    _CURRENCY2 = "USD"
+    _VALUE= 1
 
-    def __init__(self, url=_url, currency1=_currency1, currency2=_currency2, value=_value):
-        self._url = url
+
+    def __init__(self, currency1=_CURRENCY1, value=_VALUE):
+        self._url = "https://calcus.ru/currency"
         self._currency1 = currency1
-        self._currency2 = currency2
         self._value = value
+        self._currency2 = None
         self._response = None
         self._dic = None
         self._result_dic = None
+
+
+    """Определить значение коверитируемой валюты"""
+    def _get_currency2(self):
+        if self._currency1 != Parse._CURRENCY1:
+            self._currency2 = Parse._CURRENCY1
+        else:
+            self._currency2 = Parse._CURRENCY2
+
+
+    """собираем данные запроса"""
+    def _get_data(self):
         self._data = {
             'calculate': 1,
             'value': self._value,
@@ -33,8 +46,11 @@ class Parse:
 
 
     """Собираем данные"""
-    def _make_data(self):
-
+    def _make_result(self):
+        self._result_dic = dict(
+            Валюта_ответа=self._dic.get("currency2"),
+            Сумма_ответа=self._dic.get("value"),
+        )
 
 
     """Получем данные с запроса"""
@@ -45,23 +61,34 @@ class Parse:
             self._response = f.read()
 
 
-    @staticmethod
-    def fields(currency1, currency2, value, url):
-        Parse._url = url
-        Parse._currency1 = currency1
-        Parse._currency2 = currency2
-        Parse._value = value
-
-
+    """Функция выполнения программы"""
     def run(self):
+        self._get_currency2()
+        self._get_data()
         self._get_response()
         self._get_dict()
-        print(self._dic)
+        self._make_result()
 
 
+    """Получить словарь с результатом"""
+    @property
+    def fields(self):
+        return self._result_dic
 
-if __name__ == '__main__':
 
-    pars = Parse(currency1='USD', currency2='RUB', value=20)
-    pars.run()
+    """Заполняем поля"""
+    @fields.setter
+    def fields(self, dic):
+        self._currency1 = dic.get('Валюта_запроса')
+        self._value = dic.get('Сумма_запроса')
+        self.run()
+
+
+# if __name__ == '__main__':
+#
+#     pars = Parse()
+#     dic = dict(currency1='RUB', value=20)
+#     pars.fields = dic
+#
+#     print(pars.fields)
 

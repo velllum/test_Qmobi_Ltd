@@ -4,37 +4,58 @@ import json
 from http import HTTPStatus
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+from parse import Parse
 
 
-class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
-    dic = {}
+# class Server:
+#     def __init__(self):
+#         server = HTTPServer(('', 8080), SimpleHandler)
+#         server.serve_forever()
+
+
+class SimpleHandler(BaseHTTPRequestHandler):
+
     kod = None
     message = None
     description = None
-    json_data = None
-    post_data = None
     status = HTTPStatus
 
+    json_data = None
+    post_data = None
+    pars = Parse()
+
+    dic = dict()
+    # fields_status = dict()
+    fields_items = dict(
+            Валюта_запроса="Укажите USD или RUB",
+            Сумма_запроса=0,
+            Валюта_ответа="???",
+            Сумма_ответа=0,
+        )
 
 
-    """Заполнить поля статуса сервера"""
+    """Заполнить поля вывода статуса сервера"""
     def _fields_status(self):
-        return {
-            "status": {
-                "description": self.status.description,
-                "enum_name": self.status.phrase,
-                "code": self.status.value,
-            }
-        }
+        # self.fields_status = dict(
+        return dict(
+            status=dict(
+                description=self.status.description,
+                enum_name=self.status.phrase,
+                code=self.status.value,
+            )
+        )
 
-    """Заполнить поля данные, по умолчанию равные нолю"""
-    def _fields_items(self):
-        return {
-            "Результат": 0,
-            "Сумма_запроса": "Укажите сумму",
-            "Валюта": "Укажите USD или RUB",
-        }
+
+    # """Заполнить поля вывода данных конвертора сервера"""
+    # def _fields_items(self):
+    #     # self.fields_items = dict(
+    #     return dict(
+    #         Валюта_запроса="Укажите USD или RUB",
+    #         Сумма_запроса=0,
+    #         Валюта_ответа="???",
+    #         Сумма_ответа=0,
+    #     )
 
 
     """Создаем словарь полей с проверкой на ошибку"""
@@ -43,28 +64,25 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
             self.dic["error"] = self._fields_status()
         else:
             self.dic = self._fields_status()
-            self.dic["status"]["items"] = self._fields_items()
+            self.dic["status"]["items"] = self.fields_items
 
 
     """Проверка ошибки"""
     def _is_error(self):
         if self.command == "POST" and self.path != "/":
-            print(self.command, self.path)
+            print(self.command)
             self.status = HTTPStatus.NOT_IMPLEMENTED
-
         elif self.path != "/":
             self.status = HTTPStatus.NOT_FOUND
             print("GET",self.command)
-
         else:
             self.status = HTTPStatus.OK
-
-        self._make_dict()
 
 
     """Добавляем запрос"""
     def _set_headers(self):
         self._is_error()
+        self._make_dict()
         self.send_response(self.status.value)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
@@ -98,18 +116,16 @@ class SimpleHTTPRequestHandler(BaseHTTPRequestHandler):
 
     """post запроса"""
     def do_POST(self):
-        self._set_headers()
         self._get_post_data()
         self._get_dict()
 
-        #==============================
-        # Обрабатываем полученные данные
-        print(self.dic)
-        print("dic_data", self.dic_data)
-        #================================
+        """Переименовать пременные ближе к челевеко понятным"""
+        self.pars.fields = self.dic_data # передаем данные в парсер
+        self.dic_data.update(self.pars.fields) # расширяем данными из парсера
+        self.fields_items = self.dic_data # переопределяем данные а "items"
 
-        # создать парсер для обработки
 
+        self._set_headers()
         self._get_json()
         self.wfile.write(self.json_data)
 
@@ -129,4 +145,4 @@ def run(server_class=HTTPServer, handler_class=BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
-    run(handler_class=SimpleHTTPRequestHandler)
+    run(handler_class=SimpleHandler)
