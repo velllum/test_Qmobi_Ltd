@@ -8,75 +8,75 @@ from parse import Parse
 
 
 
-# class Server:
-#     def __init__(self):
-#         server = HTTPServer(('', 8080), SimpleHandler)
-#         server.serve_forever()
-
-
 class SimpleHandler(BaseHTTPRequestHandler):
 
-    kod = None
-    message = None
-    description = None
-    status = HTTPStatus
+    _DEFAULT_FIELDS_ITEMS = dict(
+        Валюта_запроса="Введите конверт. валюту RUB или USD",
+        Валюта_ответа="...",
+        Сумма_запроса="Введите конверт. сумму",
+        Сумма_ответа="..."
+    )
 
-    json_data = None
-    post_data = None
-    pars = Parse()
+    def __init__(self, *args, **kwargs):
+        self.pars = Parse()
 
-    dic = dict()
-    # fields_status = dict()
-    fields_items = dict(
-            Валюта_запроса="Укажите USD или RUB",
-            Сумма_запроса=0,
-            Валюта_ответа="???",
-            Сумма_ответа=0,
-        )
+        self.post_request_data = bytes()
+        self.response_data = bytes()
+        self.base_data = dict()
+        self.post_data_dict = dict()
+
+        self.status = HTTPStatus.OK
+        self.item_field = SimpleHandler._DEFAULT_FIELDS_ITEMS
+
+
+        BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
 
     """Заполнить поля вывода статуса сервера"""
-    def _fields_status(self):
-        # self.fields_status = dict(
+    @property
+    def status_fields(self):
         return dict(
-            status=dict(
-                description=self.status.description,
-                enum_name=self.status.phrase,
-                code=self.status.value,
+                status=dict(
+                    description=self.status.description,
+                    enum_name=self.status.phrase,
+                    code=self.status.value,
+                )
             )
-        )
 
 
-    # """Заполнить поля вывода данных конвертора сервера"""
-    # def _fields_items(self):
-    #     # self.fields_items = dict(
-    #     return dict(
-    #         Валюта_запроса="Укажите USD или RUB",
-    #         Сумма_запроса=0,
-    #         Валюта_ответа="???",
-    #         Сумма_ответа=0,
-    #     )
+    @status_fields.setter
+    def status_fields(self, state_field):
+        self.state_field = state_field
+
+
+    """Получить поля с данными конвертера"""
+    @property
+    def items_fields(self):
+        return self.item_field
+
+
+    """Собрать поля с данными конвертера"""
+    @items_fields.setter
+    def items_fields(self, dic):
+        self.item_field = dic
+
+
+    """Проверка на ошибки сервера"""
+    def _is_error(self):
+        if self.command == "POST" and self.path != "/":
+            self.status = HTTPStatus.NOT_IMPLEMENTED
+        elif self.path != "/":
+            self.status = HTTPStatus.NOT_FOUND
+
 
 
     """Создаем словарь полей с проверкой на ошибку"""
     def _make_dict(self):
         if self.status != 200:
-            self.dic["error"] = self._fields_status()
+            self.base_data["error"] = self.status_fields
         else:
-            self.dic = self._fields_status()
-            self.dic["status"]["items"] = self.fields_items
-
-
-    """Проверка ошибки"""
-    def _is_error(self):
-        if self.command == "POST" and self.path != "/":
-            print(self.command)
-            self.status = HTTPStatus.NOT_IMPLEMENTED
-        elif self.path != "/":
-            self.status = HTTPStatus.NOT_FOUND
-            print("GET",self.command)
-        else:
-            self.status = HTTPStatus.OK
+            self.base_data = self.status_fields
+            self.base_data["status"]["items"] = self.items_fields
 
 
     """Добавляем запрос"""
@@ -90,59 +90,77 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     """Конвертируем словарь в json массив"""
     def _get_json(self):
-        json_data = json.dumps(self.dic, sort_keys=True, indent=4)
-        json_data = codecs.decode(json_data, 'unicode_escape')
-        self.json_data = bytes(json_data, 'utf8')
+        data = json.dumps(self.base_data, sort_keys=True, indent=4)
+        data = codecs.decode(data, 'unicode_escape')
+        self.response_data = bytes(data, 'utf8')
 
 
     """Получаем данные с post запроса"""
     def _get_post_data(self):
         content_length = int(self.headers['Content-Length'])
-        self.post_data = self.rfile.read(content_length)
+        self.post_request_data = self.rfile.read(content_length)
 
 
-    """Конвертируем json в словарь"""
+    """Конвертируем полученные post данные в словарь"""
     def _get_dict(self):
-        post_data = self.post_data.decode("utf8")
-        self.dic_data= dict(json.loads(post_data))
+        data = self.post_request_data.decode("utf8")
+        print("data", type(data),data)
+        self.post_data_dict = dict(json.loads(data))
+        print(type(self.post_data_dict["Валюта_запроса"])) # isinstance
 
 
-    """get запроса"""
+    """Проверка отправленных данных на сервер"""
+    def _post_data_validation(self):
+        text = self.post_data_dict["Валюта_запроса"]
+        if not isinstance(text, str):
+            self.status_fields = "Вы ввели число введите пожалуйста текст"
+
+
+    """Результат работы конвертора"""
+    def _get_result_converter(self):
+        self.pars.fields = self.post_data_dict  # передаем данные в парсер
+        self.post_data_dict.update(self.pars.fields)  # расширяем данными из парсера
+        self.items_fields = self.post_data_dict  # переопределяем данные а "items"
+
+
+    """get запрос"""
     def do_GET(self):
         self._set_headers()
         self._get_json()
-        self.wfile.write(self.json_data)
+        self.wfile.write(self.response_data)
 
 
-    """post запроса"""
+    """post запрос"""
     def do_POST(self):
         self._get_post_data()
         self._get_dict()
 
-        """Переименовать пременные ближе к челевеко понятным"""
-        self.pars.fields = self.dic_data # передаем данные в парсер
-        self.dic_data.update(self.pars.fields) # расширяем данными из парсера
-        self.fields_items = self.dic_data # переопределяем данные а "items"
+        self._post_data_validation()
 
+        # self._get_result_converter()
 
         self._set_headers()
         self._get_json()
-        self.wfile.write(self.json_data)
+        self.wfile.write(self.response_data)
 
 
 
-def run(server_class=HTTPServer, handler_class=BaseHTTPRequestHandler):
-    server_address = ('', 8000)
-    httpd = server_class(server_address, handler_class)
 
-    try:
-        print(f"(START) Serving HTTP on {httpd.server_address[0]} port {httpd.server_port} (http://{httpd.server_address[0]}:{httpd.server_port}/)")
-        httpd.serve_forever()
+class Server:
 
-    except KeyboardInterrupt:
-        print(f"(STOP) Serving HTTP on {httpd.server_address[0]} port {httpd.server_port} (http://{httpd.server_address[0]}:{httpd.server_port}/)")
-        httpd.server_close()
+    _SERVER_CLASS = SimpleHandler
+    _SERVER_ADDRESS = ('', 8000)
+
+    def __init__(self):
+        server = HTTPServer(Server._SERVER_ADDRESS, Server._SERVER_CLASS)
+        try:
+            print(f"(START) Serving HTTP on {server.server_address[0]} port {server.server_port} (http://{server.server_address[0]}:{server.server_port}/)")
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print(f"(STOP) Serving HTTP on {server.server_address[0]} port {server.server_port} (http://{server.server_address[0]}:{server.server_port}/)")
+            server.server_close()
+
 
 
 if __name__ == '__main__':
-    run(handler_class=SimpleHandler)
+    server = Server()

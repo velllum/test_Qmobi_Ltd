@@ -19,6 +19,7 @@ class Parse:
         self._response = None
         self._dic = None
         self._result_dic = None
+        self._data = None
 
 
     """Определить значение коверитируемой валюты"""
@@ -41,8 +42,9 @@ class Parse:
 
     """Преобразуем данные в словарь"""
     def _get_dict(self):
-        text = self._response.decode("utf8")
-        self._dic = dict(json.loads(text))
+        if self._response:
+            text = self._response.decode("utf8")
+            self._dic = dict(json.loads(text))
 
 
     """Собираем данные"""
@@ -83,12 +85,4 @@ class Parse:
         self._value = dic.get('Сумма_запроса')
         self.run()
 
-
-# if __name__ == '__main__':
-#
-#     pars = Parse()
-#     dic = dict(currency1='RUB', value=20)
-#     pars.fields = dic
-#
-#     print(pars.fields)
 
