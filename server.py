@@ -48,7 +48,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
     @property
     def status_fields(self):
         """
-        геттер передает поля статуса
+        передаем поля статуса
         :return: dict()
         """
         self._get_fields()  # поля по умолчанию
@@ -146,13 +146,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         data = self.post_request_data.decode("utf8")
         self.post_data_dict = dict(json.loads(data))
 
-    # """Проверка отправленных данных на сервер"""
-    # def _post_data_validation(self):
-    #     text = self.post_data_dict["Валюта_запроса"]
-    #     if not isinstance(text, str):
-    #         raise ValueError("Вы ввели число введите пожалуйста текст")
-    #         # self.status_fields = "Вы ввели число введите пожалуйста текст"
-
 
     def _get_result_converter(self):
         """
@@ -162,6 +155,22 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.pars.fields = self.post_data_dict  # передаем данные в парсер
         self.post_data_dict.update(self.pars.fields)  # расширяем данными из парсера
         self.items_fields = self.post_data_dict  # переопределяем данные в "items"
+
+
+    def post_check_data_errors(self):
+        """
+
+        :return:
+        """
+        self.error.value = self.post_data_dict
+        # if self.error.value:
+        print("error",self.error.value)
+
+        # print(self.status_fields)
+        self.status_fields = self.error.value["error_message"]
+        print(self.base_data)
+
+        # print(self.status_fields)
 
 
     def do_GET(self):
@@ -182,18 +191,13 @@ class SimpleHandler(BaseHTTPRequestHandler):
         :return:
         """
         self._defining_status()
-        self._fill_base_dict()
         self._get_post_data()
         self._get_dict()
 
-        """"внедрить проверку"""
-        print("post_data_dict", self.post_data_dict)
-        self.error.value = self.post_data_dict
-
-        # self._post_data_validation()
-
+        self.post_check_data_errors() # сделать проверку на пустоту то идем дальше если нет то отправляем на испровление
         # self._get_result_converter()
 
+        self._fill_base_dict()
         self._set_headers()
         self._data_send_response()
         self.wfile.write(self.response_data)
