@@ -5,71 +5,68 @@ from http import HTTPStatus
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 from errors import ServerError
-from parse import Parse
+from converter import MoneyConverter
 
 
 class SimpleHandler(BaseHTTPRequestHandler):
-
-    _DEFAULT_FIELDS_ITEMS = dict(
-        Валюта_запроса="Введите конверт. валюту RUB или USD",
-        Валюта_ответа="...",
-        Сумма_запроса="Введите конверт. сумму",
-        Сумма_ответа="..."
-    )
+    """
+    Класс расширяется базовым классом BaseHTTPRequestHandler
+     и реализует работу конвертера валют рубль к доллару и обратно
+    """
 
     def __init__(self, *args, **kwargs):
-        self.pars = Parse()
+        """
+            - self.pars - объект конвертера MoneyConverter()
+            - self.error - объект проверки ввода данных ServerError()
+            - self.response_data - словарь хранит данные для вывода
+            - self.base_data - словарь хранит все базовые данные
+            - self.post_data_dict - словарь хранит данные с POST запроса
+            - self.status - объект хранит данные статусов, описаний и кодов ошибок сервера
+            - self.item_field - словарь хранит дефолтными данными результата работы конвертера
+        :param args:
+        :param kwargs:
+        """
+        self.pars = MoneyConverter()
         self.error = ServerError()
 
-        self.post_request_data = bytes()
         self.response_data = bytes()
         self.base_data = dict()
         self.post_data_dict = dict()
 
         self.status = HTTPStatus.OK
-        self.item_field = SimpleHandler._DEFAULT_FIELDS_ITEMS
-        self.state_field = dict()
+        self.item_field = dict(
+                    Валюта_запроса="Введите конверт. валюту RUB или USD",
+                    Сумма_запроса="Введите конверт. сумму",
+                    Валюта_ответа="...",
+                    Сумма_ответа="..."
+                )
 
         BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
 
 
 
-    def _get_fields(self):
+    @property
+    def status_fields(self):
         """
-        заполняет поля статуса
-        :return: None
+        Создаем поля описывающие состояние статуса сервера.
+        Поля содержат по дефолту значение значение статуса сервера 200 OK
+        Поля меняют значение, зависящие от свойства self.status
+        :return: dict()
         """
-        self.state_field = dict(
+        return dict(
             description=self.status.description,
             enum_name=self.status.phrase,
             code=self.status.value,
         )
 
-    @property
-    def status_fields(self):
-        """
-        передаем поля статуса
-        :return: dict()
-        """
-        self._get_fields()  # поля по умолчанию
-        return self.state_field
-
-
-    @status_fields.setter
-    def status_fields(self, state_field):
-        """
-        Получить поля с данными статуса
-        :param state_field: > dict()
-        :return: None
-        """
-        self.state_field = state_field
-
 
     @property
     def items_fields(self):
         """
-        Получить поля с данными конвертера
-        :return: None
+        Передает поля заполненные данными конвертора.
+        По умолчанию, поля заполнены дефолтными данными,
+        хранящиеся в статическом свойстве _DEFAULT_FIELDS_ITEMS
+        :return: self.item_field
         """
         return self.item_field
 
@@ -77,7 +74,8 @@ class SimpleHandler(BaseHTTPRequestHandler):
     @items_fields.setter
     def items_fields(self, dic):
         """
-        Собрать поля с данными конвертера
+        Получаем обработанное значение от конвертера,
+        в виде словаря dict() и сохраняем в self.item_field
         :param dic: > dict()
         :return: None
         """
@@ -86,8 +84,9 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def _defining_status(self):
         """
-        Определяем статус запроса
-        Переопределяем свойство status - HTTPStatus
+        Определяем статус запроса, и переопределяем свойство self.status - HTTPStatus
+            - Проверяем является ли POST запрос не существующей ссылкой, если да то меняем статус в self.status на HTTPStatus.NOT_IMPLEMENTED
+            - Проверяем GET запрос на существование, если условие прошли меняем статус на HTTPStatus.NOT_FOUND
         :return: None
         """
         if self.command == "POST" and self.path != "/":
@@ -98,8 +97,12 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def _fill_base_dict(self):
         """
+        Проверяет статус self.status на код сервера 200
+            - Если статус подтвердился, то заполняем словарь
         наполняем базовый словарь данными
-        Переопределяем свойство base_data - основной словарь
+        Переопределяем свойство base_data - основной словарь self.base_data,
+        полями из свойства статуса и данными из конвертера
+            - Если же нет то тогда предаем только статус об ошибке сервера self.status
         :return: None
         """
         if self.status != 200:
@@ -111,7 +114,9 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def _set_headers(self):
         """
-        Заполняем заголовки запроса
+        Заполняем заголовки
+            - передаем в запрос, код статуса
+            - заполняем заголовки запроса значениями
         :return: None
         """
         self.send_response(self.status.value)
@@ -121,7 +126,11 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def _data_send_response(self):
         """
-        Подготавливаем словарь с данными, для отправки ответа
+        Подготавливаем словарь с данными self.base_data, для отправки ответа
+            - Преобразует в формат json
+            - Кодирует в формат пригодный для вывода кириллических символов
+            - Конвертируем в байтовое представление
+            - Передаем на хранение в self.response_data
         :return: None
         """
         data = json.dumps(self.base_data, sort_keys=True, indent=4)
@@ -131,51 +140,51 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def _get_post_data(self):
         """
-        Получаем данные с post запроса
+        Получает и конвертирует POST данные
+            - Получаем данные с post запроса в виде байт строки
+            - Декодируем в формат UTF8
+            - Конвертируем в JSON и в словарь, сохраняем в self.post_data_dict
         :return: None
         """
         content_length = int(self.headers['Content-Length'])
-        self.post_request_data = self.rfile.read(content_length)
+        post_data = self.rfile.read(content_length)
+        data = post_data.decode("utf8")
+        try:
+            self.post_data_dict = dict(json.loads(data))
+        except:
+            self.post_data_dict = {"Валюта_запроса": "","Сумма_запроса": 0}
 
 
-    def _get_dict(self):
+    def _post_check_data_errors(self):
         """
-        Конвертируем полученные post данные в словарь self.post_data_dict
-        :return: None
+        Проверяем полученные данные POST запроса на правильность ввода.
+        Если если словарь вернулся пустым то возвращаем ответ True
+        Если нет, то передаем ответ в базовый словарь свойства self.base_data
+        :return: bool
         """
-        data = self.post_request_data.decode("utf8")
-        self.post_data_dict = dict(json.loads(data))
+        self.error.value = self.post_data_dict
+        if self.error.value:
+            self.base_data = self.error.value
+        return True
 
 
     def _get_result_converter(self):
         """
-        Получить результат работы конвертора
+        Обрабатывает данные полученные от конвертера
+            - Отправляем данные в конвертер на обработку
+            - Возвращенными данными, расширяем словарь что хранится в свойстве self.post_data_dict
+            - Переопределяем данные для вывода, что хранятся в свойстве self.items_field
         :return: None
         """
         self.pars.fields = self.post_data_dict  # передаем данные в парсер
-        self.post_data_dict.update(self.pars.fields)  # расширяем данными из парсера
+        self.post_data_dict.update(self.pars.fields)  #
         self.items_fields = self.post_data_dict  # переопределяем данные в "items"
 
-
-    def post_check_data_errors(self):
-        """
-
-        :return:
-        """
-        self.error.value = self.post_data_dict
-        # if self.error.value:
-        print("error",self.error.value)
-
-        # print(self.status_fields)
-        self.status_fields = self.error.value["error_message"]
-        print(self.base_data)
-
-        # print(self.status_fields)
 
 
     def do_GET(self):
         """
-        Наполняем get запрос функционалом
+        Обрабатываем GET запросы, и выводим в виде json на экран
         :return: None
         """
         self._defining_status()
@@ -187,23 +196,29 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         """
-        Наполняем post запрос функционалом
-        :return:
+        Обрабатывает POST запросы, и передает для вывода, json на экран
+        :return: None
         """
         self._defining_status()
         self._get_post_data()
-        self._get_dict()
 
-        self.post_check_data_errors() # сделать проверку на пустоту то идем дальше если нет то отправляем на испровление
-        # self._get_result_converter()
+        if self._post_check_data_errors():
+            self._get_result_converter()
+            if not self.base_data:
+                self._fill_base_dict()
 
-        self._fill_base_dict()
         self._set_headers()
         self._data_send_response()
         self.wfile.write(self.response_data)
 
 
+
 class Server:
+    """
+    Запуск сервера переменная _SERVER_ADDRESS данные по умолчанию любой числовой адрес и порт по умолчанию 8000(0.0.0.0:8000)
+        - вводим адрес
+        - вводим порт
+    """
     _SERVER_CLASS = SimpleHandler
     _SERVER_ADDRESS = ('', 8000)
 

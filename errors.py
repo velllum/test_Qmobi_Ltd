@@ -4,7 +4,9 @@
 class ServerError(Exception):
 
     def __init__(self):
-
+        """
+        Проверка данных перед отправкой
+        """
         self.dic = dict()
         self.error_message = dict(
             error_message=dict()
@@ -42,10 +44,9 @@ class ServerError(Exception):
         try:
             value_ = value.upper()
             if value_ != 'RUB' and value_ != 'USD':
-                print("not")
                 self.error_message["error_message"]["Валюта_запроса"] = "Укажите поле валюты 'RUB' или 'USD'"
         except Exception as e:
-            print("ERROR", e)
+            print(f"ERROR {value} - ", e)
 
 
     def _num_check_error(self, value):
@@ -60,7 +61,7 @@ class ServerError(Exception):
             elif value <= 0:
                 self.error_message["error_message"]["Сумма_запроса"] = "Указанное число меньше ноля, или ноль"
         except Exception as e:
-            print("ERROR", e)
+            print(f"ERROR {value} - ", e)
 
 
 
@@ -72,34 +73,3 @@ class ServerError(Exception):
         self._str_check_error(self.dic["Валюта_запроса"])
         self._num_check_error(self.dic["Сумма_запроса"])
 
-
-
-
-# if __name__ == '__main__':
-#     error = ServerError()
-#     error.value = {
-#     "Валюта_запроса": "RUB",
-#     "Сумма_запроса": 1
-# }
-#     print(error.value)
-
-
-
-
-# ser = ServerError()
-# ser._post_data_validation()
-
-
-
-# a = input("Input positive integer: ")
-#
-# try:
-#     a = int(a)
-#     if a < 0:
-#         raise ServerError("You give negative!")
-# except ValueError:
-#     print("Error type of value!")
-# except ServerError as mr:
-#     print(mr)
-# else:
-#     print(a)
