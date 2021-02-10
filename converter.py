@@ -2,7 +2,6 @@ import json
 from urllib import request, parse
 
 
-
 class MoneyConverter:
     """
     Класс конвертирует валюту по указанному значению  в словаре
@@ -32,8 +31,7 @@ class MoneyConverter:
     _URL = "https://calcus.ru/currency"
     _CURRENCY1 = "RUB"
     _CURRENCY2 = "USD"
-    _VALUE= 1
-
+    _VALUE = 1
 
     def __init__(self, currency1=_CURRENCY1, value=_VALUE):
         """
@@ -57,9 +55,6 @@ class MoneyConverter:
         self.result_dic = None
         self.form_data = None
 
-
-
-
     @property
     def fields(self):
         """
@@ -67,7 +62,6 @@ class MoneyConverter:
         :return: None
         """
         return self.result_dic
-
 
     @fields.setter
     def fields(self, dic):
@@ -82,7 +76,6 @@ class MoneyConverter:
         self.value = dic.get('Сумма_запроса')
         self.run()
 
-
     def _get_currency2(self):
         """
         Определяет валюту для ответа, сохраняет в self.currency2
@@ -92,7 +85,6 @@ class MoneyConverter:
             self.currency2 = MoneyConverter._CURRENCY1
         else:
             self.currency2 = MoneyConverter._CURRENCY2
-
 
     def _get_data(self):
         """
@@ -107,7 +99,6 @@ class MoneyConverter:
             'currency2': self.currency2,
         }
 
-
     def _get_dict(self):
         """
         Преобразует данные ответа в словарь
@@ -118,7 +109,6 @@ class MoneyConverter:
         if self.response:
             text = self.response.decode("utf8")
             self.base_dic = dict(json.loads(text))
-
 
     def _make_result(self):
         """
@@ -131,7 +121,6 @@ class MoneyConverter:
             Сумма_ответа=self.base_dic.get("value"),
         )
 
-
     def _get_response(self):
         """
         Делает запрос в конвертер, ответ сохраняет в self.response
@@ -141,7 +130,6 @@ class MoneyConverter:
         data = data.encode('ascii')
         with request.urlopen(self.url, data) as f:
             self.response = f.read()
-
 
     def run(self):
         """
@@ -153,6 +141,3 @@ class MoneyConverter:
         self._get_response()
         self._get_dict()
         self._make_result()
-
-
-

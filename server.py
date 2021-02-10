@@ -35,15 +35,13 @@ class SimpleHandler(BaseHTTPRequestHandler):
 
         self.status = HTTPStatus.OK
         self.item_field = dict(
-                    Валюта_запроса="Введите конверт. валюту RUB или USD",
-                    Сумма_запроса="Введите конверт. сумму",
-                    Валюта_ответа="...",
-                    Сумма_ответа="..."
-                )
+            Валюта_запроса="Введите конверт. валюту RUB или USD",
+            Сумма_запроса="Введите конверт. сумму",
+            Валюта_ответа="...",
+            Сумма_ответа="..."
+        )
 
         BaseHTTPRequestHandler.__init__(self, *args, **kwargs)
-
-
 
     @property
     def status_fields(self):
@@ -59,7 +57,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
             code=self.status.value,
         )
 
-
     @property
     def items_fields(self):
         """
@@ -70,7 +67,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         """
         return self.item_field
 
-
     @items_fields.setter
     def items_fields(self, dic):
         """
@@ -80,7 +76,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         :return: None
         """
         self.item_field = dic
-
 
     def _defining_status(self):
         """
@@ -93,7 +88,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.status = HTTPStatus.NOT_IMPLEMENTED
         elif self.path != "/":
             self.status = HTTPStatus.NOT_FOUND
-
 
     def _fill_base_dict(self):
         """
@@ -111,7 +105,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.base_data["status"] = self.status_fields
             self.base_data["items"] = self.items_fields
 
-
     def _set_headers(self):
         """
         Заполняем заголовки
@@ -122,7 +115,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.send_response(self.status.value)
         self.send_header('Content-type', 'application/json')
         self.end_headers()
-
 
     def _data_send_response(self):
         """
@@ -136,7 +128,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         data = json.dumps(self.base_data, sort_keys=True, indent=4)
         data = codecs.decode(data, 'unicode_escape')
         self.response_data = bytes(data, 'utf8')
-
 
     def _get_post_data(self):
         """
@@ -152,8 +143,7 @@ class SimpleHandler(BaseHTTPRequestHandler):
         try:
             self.post_data_dict = dict(json.loads(data))
         except:
-            self.post_data_dict = {"Валюта_запроса": "","Сумма_запроса": 0}
-
+            self.post_data_dict = {"Валюта_запроса": "", "Сумма_запроса": 0}
 
     def _post_check_data_errors(self):
         """
@@ -167,7 +157,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
             self.base_data = self.error.value
         return True
 
-
     def _get_result_converter(self):
         """
         Обрабатывает данные полученные от конвертера
@@ -180,8 +169,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.post_data_dict.update(self.pars.fields)  #
         self.items_fields = self.post_data_dict  # переопределяем данные в "items"
 
-
-
     def do_GET(self):
         """
         Обрабатываем GET запросы, и выводим в виде json на экран
@@ -192,7 +179,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self._set_headers()
         self._data_send_response()
         self.wfile.write(self.response_data)
-
 
     def do_POST(self):
         """
@@ -212,7 +198,6 @@ class SimpleHandler(BaseHTTPRequestHandler):
         self.wfile.write(self.response_data)
 
 
-
 class Server:
     """
     Запуск сервера переменная _SERVER_ADDRESS данные по умолчанию любой числовой адрес и порт по умолчанию 8000(0.0.0.0:8000)
@@ -223,15 +208,15 @@ class Server:
     _SERVER_ADDRESS = ('', 8000)
 
     def __init__(self):
-        server = HTTPServer(Server._SERVER_ADDRESS, Server._SERVER_CLASS)
+        handler = HTTPServer(Server._SERVER_ADDRESS, Server._SERVER_CLASS)
         try:
             print(
-                f"(START) Serving HTTP on {server.server_address[0]} port {server.server_port} (http://{server.server_address[0]}:{server.server_port}/)")
-            server.serve_forever()
+                f"(START) Serving HTTP on {handler.server_address[0]} port {handler.server_port} (http://{handler.server_address[0]}:{handler.server_port}/)")
+            handler.serve_forever()
         except KeyboardInterrupt:
             print(
-                f"(STOP) Serving HTTP on {server.server_address[0]} port {server.server_port} (http://{server.server_address[0]}:{server.server_port}/)")
-            server.server_close()
+                f"(STOP) Serving HTTP on {handler.server_address[0]} port {handler.server_port} (http://{handler.server_address[0]}:{handler.server_port}/)")
+            handler.server_close()
 
 
 if __name__ == '__main__':
