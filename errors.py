@@ -1,6 +1,3 @@
-
-
-
 class ServerError(Exception):
 
     def __init__(self):
@@ -12,7 +9,6 @@ class ServerError(Exception):
             error_message=dict()
         )
 
-
     @property
     def value(self):
         """
@@ -21,7 +17,6 @@ class ServerError(Exception):
         """
         if self.error_message["error_message"]:
             return self.error_message
-
 
     @value.setter
     def value(self, dic):
@@ -32,8 +27,6 @@ class ServerError(Exception):
         """
         self.dic = dic
         self.run()
-
-
 
     def _str_check_error(self, value):
         """
@@ -47,7 +40,6 @@ class ServerError(Exception):
                 self.error_message["error_message"]["Валюта_запроса"] = "Укажите поле валюты 'RUB' или 'USD'"
         except Exception as e:
             print(f"ERROR {value} - ", e)
-
 
     def _num_check_error(self, value):
         """
@@ -63,13 +55,10 @@ class ServerError(Exception):
         except Exception as e:
             print(f"ERROR {value} - ", e)
 
-
-
-    def  run(self):
+    def run(self):
         """
         Функция старта
         :return: None
         """
         self._str_check_error(self.dic["Валюта_запроса"])
         self._num_check_error(self.dic["Сумма_запроса"])
-
